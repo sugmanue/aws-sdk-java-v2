@@ -15,60 +15,64 @@
 
 package software.amazon.awssdk.retries;
 
+import java.util.function.Predicate;
 import software.amazon.awssdk.annotations.SdkPublicApi;
 import software.amazon.awssdk.annotations.ThreadSafe;
+import software.amazon.awssdk.retries.api.AcquireInitialTokenRequest;
 import software.amazon.awssdk.retries.api.BackoffStrategy;
 import software.amazon.awssdk.retries.api.RetryStrategy;
-import software.amazon.awssdk.retries.internal.StandardRetryStrategyImpl;
+import software.amazon.awssdk.retries.internal.LegacyRetryStrategyImpl;
 
 /**
- * The standard retry strategy is the recommended {@link RetryStrategy} for normal use-cases.
+ * The adaptive retry strategy is a {@link RetryStrategy} when executing against a very resource-constrained set of resources.
  * <p>
- * Unlike {@link AdaptiveRetryStrategy}, the standard strategy is generally useful across all retry use-cases.
+ * Unlike {@link StandardRetryStrategy}, care should be taken when using this strategy. Specifically, it should be used:
+ * <ol>
+ * <li>When the availability of downstream resources are mostly affected by callers that are also using
+ * the {@link AdaptiveRetryStrategy}.
+ * <li>The scope (either the whole strategy or the {@link AcquireInitialTokenRequest#scope}) of the strategy is constrained
+ * to target "resource", so that availability issues in one resource cannot delay other, unrelated resource's availability.
  * <p>
- * The standard retry strategy by default:
+ * The adaptive retry strategy by default:
  * <ol>
  *     <li>Retries on the conditions configured in the {@link Builder}.
- *     <li>Retries 2 times (3 total attempts). Adjust with {@link Builder#maxAttempts(int)}
- *     <li>Uses the {@link BackoffStrategy#exponentialDelay} backoff strategy, with a base delay of
- *     1 second and max delay of 20 seconds. Adjust with {@link Builder#backoffStrategy}
- *     <li>Circuit breaking (disabling retries) in the event of high downstream failures across the scope of
- *     the strategy. The circuit breaking will never prevent a successful first attempt. Adjust with
- *     {@link Builder#circuitBreakerEnabled}.
+ *     <li>Retries 2 times (3 total attempts). Adjust with {@link Builder#maxAttempts}
+ *     <li>Uses a dynamic backoff delay based on load currently perceived against the downstream resource
+ *     <li>Circuit breaking (disabling retries) in the event of high downstream failures within an individual scope.
+ *     Circuit breaking may prevent a first attempt in outage scenarios to protect the downstream service.
  * </ol>
  *
- * @see AdaptiveRetryStrategy
+ * @see StandardRetryStrategy
  */
 @SdkPublicApi
 @ThreadSafe
-public interface StandardRetryStrategy extends RetryStrategy<StandardRetryStrategy.Builder, StandardRetryStrategy> {
+public interface LegacyRetryStrategy extends RetryStrategy<LegacyRetryStrategy.Builder, LegacyRetryStrategy> {
     /**
-     * Create a new {@link StandardRetryStrategy.Builder}.
+     * Create a new {@link AdaptiveRetryStrategy.Builder}.
      *
      * <p>Example Usage
      * <pre>
-     * StandardRetryStrategy retryStrategy =
-     *     StandardRetryStrategy.builder()
+     * LegacyRetryStrategy retryStrategy =
+     *     LegacyRetryStrategy.builder()
      *                          .retryOnExceptionInstanceOf(IllegalArgumentException.class)
      *                          .retryOnExceptionInstanceOf(IllegalStateException.class)
      *                          .build();
      * </pre>
      */
-    static Builder builder() {
-        StandardRetryStrategyImpl.Builder builder = StandardRetryStrategyImpl.builder();
-        return builder;
+    static LegacyRetryStrategy.Builder builder() {
+        return LegacyRetryStrategyImpl.builder();
     }
 
     @Override
     Builder toBuilder();
 
-    interface Builder extends RetryStrategy.Builder<Builder, StandardRetryStrategy> {
+    interface Builder extends RetryStrategy.Builder<Builder, LegacyRetryStrategy> {
         /**
          * Configure the backoff strategy used by this executor.
          *
          * <p>By default, this uses jittered exponential backoff.
          */
-        Builder backoffStrategy(BackoffStrategy backoffStrategy);
+        LegacyRetryStrategy.Builder backoffStrategy(BackoffStrategy backoffStrategy);
 
         /**
          * Whether circuit breaking is enabled for this executor.
@@ -83,9 +87,15 @@ public interface StandardRetryStrategy extends RetryStrategy<StandardRetryStrate
          *
          * <p>By default, this is {@code true}.
          */
-        Builder circuitBreakerEnabled(Boolean circuitBreakerEnabled);
+        LegacyRetryStrategy.Builder circuitBreakerEnabled(Boolean circuitBreakerEnabled);
+
+        /**
+         * Configure the predicate to allow the strategy categorize a Throwable as throttling exception.
+         */
+        Builder treatAsThrottling(Predicate<Throwable> treatAsThrottling);
+
 
         @Override
-        StandardRetryStrategy build();
+        LegacyRetryStrategy build();
     }
 }

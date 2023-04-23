@@ -17,17 +17,17 @@ package software.amazon.awssdk.retries.internal;
 
 import java.util.function.Predicate;
 import software.amazon.awssdk.annotations.SdkInternalApi;
-import software.amazon.awssdk.retries.StandardRetryStrategy;
+import software.amazon.awssdk.retries.LegacyRetryStrategy;
 import software.amazon.awssdk.retries.api.BackoffStrategy;
 import software.amazon.awssdk.retries.internal.circuitbreaker.TokenBucketStore;
 import software.amazon.awssdk.retries.internal.ratelimiter.RateLimiterTokenBucketStore;
 import software.amazon.awssdk.utils.Logger;
 
 @SdkInternalApi
-public class StandardRetryStrategyImpl extends GenericRetryStrategy implements StandardRetryStrategy {
-    private static final Logger LOG = Logger.loggerFor(StandardRetryStrategy.class);
+public class LegacyRetryStrategyImpl extends GenericRetryStrategy implements LegacyRetryStrategy {
+    private static final Logger LOG = Logger.loggerFor(LegacyRetryStrategy.class);
 
-    public StandardRetryStrategyImpl(GenericRetryStrategy.Builder builder) {
+    public LegacyRetryStrategyImpl(GenericRetryStrategy.Builder builder) {
         super(LOG, builder);
     }
 
@@ -41,39 +41,44 @@ public class StandardRetryStrategyImpl extends GenericRetryStrategy implements S
             RateLimiterTokenBucketStore.builder()
                                        .disabled(true)
                                        .build());
-        builder.setTreatAsThrottling(t -> false);
         return builder;
     }
 
-    public static class Builder extends GenericRetryStrategy.Builder implements StandardRetryStrategy.Builder {
+    public static class Builder extends GenericRetryStrategy.Builder implements LegacyRetryStrategy.Builder {
         private Builder() {
         }
 
-        private Builder(StandardRetryStrategyImpl strategy) {
+        private Builder(LegacyRetryStrategyImpl strategy) {
             super(strategy);
         }
 
         @Override
-        public StandardRetryStrategy.Builder backoffStrategy(BackoffStrategy backoffStrategy) {
+        public LegacyRetryStrategy.Builder backoffStrategy(BackoffStrategy backoffStrategy) {
             setBackoffStrategy(backoffStrategy);
             return this;
         }
 
         @Override
-        public StandardRetryStrategy.Builder circuitBreakerEnabled(Boolean circuitBreakerEnabled) {
+        public LegacyRetryStrategy.Builder circuitBreakerEnabled(Boolean circuitBreakerEnabled) {
             setCircuitBreakerEnabled(circuitBreakerEnabled);
             return this;
         }
 
         @Override
-        public StandardRetryStrategy.Builder retryOnException(Predicate<Throwable> shouldRetry) {
+        public LegacyRetryStrategy.Builder retryOnException(Predicate<Throwable> shouldRetry) {
             setRetryOnException(shouldRetry);
             return this;
         }
 
         @Override
-        public StandardRetryStrategy.Builder maxAttempts(int maxAttempts) {
+        public LegacyRetryStrategy.Builder maxAttempts(int maxAttempts) {
             setMaxAttempts(maxAttempts);
+            return this;
+        }
+
+        @Override
+        public LegacyRetryStrategy.Builder treatAsThrottling(Predicate<Throwable> treatAsThrottling) {
+            setTreatAsThrottling(treatAsThrottling);
             return this;
         }
 
@@ -82,15 +87,19 @@ public class StandardRetryStrategyImpl extends GenericRetryStrategy implements S
             return this;
         }
 
+        public Builder tokenBucketThrottlingExceptionCost(int exceptionCost) {
+            setTokenBucketThrottlingExceptionCost(exceptionCost);
+            return this;
+        }
+
         public Builder tokenBucketStore(TokenBucketStore tokenBucketStore) {
             setTokenBucketStore(tokenBucketStore);
             return this;
         }
 
-
         @Override
-        public StandardRetryStrategy build() {
-            return new StandardRetryStrategyImpl(this);
+        public LegacyRetryStrategy build() {
+            return new LegacyRetryStrategyImpl(this);
         }
     }
 }
