@@ -42,9 +42,8 @@ import software.amazon.awssdk.utils.builder.CopyableBuilder;
 import software.amazon.awssdk.utils.builder.ToCopyableBuilder;
 
 /**
- * Generic class that implements that common logic for all the retries
- * strategies with extension points for specific strategies to tailor
- * the behavior to its needs.
+ * Generic class that implements that common logic for all the retries strategies with extension points for specific strategies to
+ * tailor the behavior to its needs.
  */
 @SdkInternalApi
 public abstract class BaseRetryStrategy<
@@ -70,21 +69,20 @@ public abstract class BaseRetryStrategy<
     }
 
     /**
-     * This method implements the logic of {@link
-     * RetryStrategy#acquireInitialToken(AcquireInitialTokenRequest)}.
+     * This method implements the logic of {@link RetryStrategy#acquireInitialToken(AcquireInitialTokenRequest)}.
      *
      * @see RetryStrategy#acquireInitialToken(AcquireInitialTokenRequest)
      */
     @Override
     public final AcquireInitialTokenResponse acquireInitialToken(AcquireInitialTokenRequest request) {
         logAcquireInitialToken(request);
-        DefaultRetryToken token = DefaultRetryToken.builder().scope(request.scope()).build();
+        DefaultRetryToken token =
+            DefaultRetryToken.builder().scope(request.scope()).throttlingScope(request.throttlingScope()).build();
         return AcquireInitialTokenResponse.create(token, computeInitialBackoff(request));
     }
 
     /**
-     * This method implements the logic of  {@link
-     * RetryStrategy#refreshRetryToken(RefreshRetryTokenRequest)}.
+     * This method implements the logic of  {@link RetryStrategy#refreshRetryToken(RefreshRetryTokenRequest)}.
      *
      * @see RetryStrategy#refreshRetryToken(RefreshRetryTokenRequest)
      */
@@ -115,8 +113,7 @@ public abstract class BaseRetryStrategy<
     }
 
     /**
-     * This method implements the logic of {@link
-     * RetryStrategy#recordSuccess(RecordSuccessRequest)}.
+     * This method implements the logic of {@link RetryStrategy#recordSuccess(RecordSuccessRequest)}.
      *
      * @see RetryStrategy#recordSuccess(RecordSuccessRequest)
      */
@@ -147,20 +144,16 @@ public abstract class BaseRetryStrategy<
     public abstract B toBuilder();
 
     /**
-     * Computes the backoff before the first attempt, by default
-     * {@link Duration#ZERO}. Extending classes can override
-     * this method to compute different a different depending on their
-     * logic.
+     * Computes the backoff before the first attempt, by default {@link Duration#ZERO}. Extending classes can override this method
+     * to compute different a different depending on their logic.
      */
     protected Duration computeInitialBackoff(AcquireInitialTokenRequest request) {
         return Duration.ZERO;
     }
 
     /**
-     * Computes the backoff before a retry using the configured
-     * backoff strategy. Extending classes can override
-     * this method to compute different a different depending on their
-     * logic.
+     * Computes the backoff before a retry using the configured backoff strategy. Extending classes can override this method to
+     * compute different a different depending on their logic.
      */
     protected Duration computeBackoff(RefreshRetryTokenRequest request, DefaultRetryToken token) {
         Duration backoff = backoffStrategy.computeDelay(token.attempt());
@@ -169,24 +162,21 @@ public abstract class BaseRetryStrategy<
     }
 
     /**
-     * Called inside {@link #recordSuccess} to allow extending classes
-     * to update their internal state after a successful request.
+     * Called inside {@link #recordSuccess} to allow extending classes to update their internal state after a successful request.
      */
     protected void updateStateForSuccess(DefaultRetryToken token) {
     }
 
     /**
-     * Called inside {@link #refreshRetryToken} to allow extending
-     * classes to update their internal state before retrying a
+     * Called inside {@link #refreshRetryToken} to allow extending classes to update their internal state before retrying a
      * request.
      */
     protected void updateStateForRetry(RefreshRetryTokenRequest request) {
     }
 
     /**
-     * Returns the amount of tokens to withdraw from the token
-     * bucket. Extending classes can override this method to tailor
-     * this amount for the specific kind of failure.
+     * Returns the amount of tokens to withdraw from the token bucket. Extending classes can override this method to tailor this
+     * amount for the specific kind of failure.
      */
     protected int exceptionCost(RefreshRetryTokenRequest request) {
         if (circuitBreakerEnabled) {

@@ -62,8 +62,8 @@ public class RetryableStageHelper {
     private final List<String> exceptionMessageHistory = new ArrayList<>();
 
     private int attemptNumber = 0;
-    private SdkHttpResponse lastResponse = null;
-    private SdkException lastException = null;
+    private SdkHttpResponse lastResponse;
+    private SdkException lastException;
 
     public RetryableStageHelper(SdkHttpFullRequest request,
                                 RequestExecutionContext context,

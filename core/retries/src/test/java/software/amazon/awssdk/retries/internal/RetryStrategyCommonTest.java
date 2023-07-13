@@ -235,7 +235,8 @@ class RetryStrategyCommonTest {
         }
 
         public static void runTestCase(TestCase testCase, RetryStrategy<?, ?> strategy) {
-            AcquireInitialTokenResponse res = strategy.acquireInitialToken(AcquireInitialTokenRequestImpl.create(testCase.scope));
+            AcquireInitialTokenResponse res = strategy.acquireInitialToken(AcquireInitialTokenRequestImpl.create(testCase.scope
+                , testCase.scope));
             RetryToken token = res.token();
             testCase.succeeded = false;
             BusinessLogic logic = new BusinessLogic(testCase.exceptions);

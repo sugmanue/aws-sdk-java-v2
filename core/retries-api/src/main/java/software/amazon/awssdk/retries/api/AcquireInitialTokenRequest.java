@@ -35,10 +35,12 @@ public interface AcquireInitialTokenRequest {
      */
     String scope();
 
+    String throttlingScope();
+
     /**
      * Creates a new {@link AcquireInitialTokenRequest} instance with the given scope.
      */
-    static AcquireInitialTokenRequest create(String scope) {
-        return AcquireInitialTokenRequestImpl.create(scope);
+    static AcquireInitialTokenRequest create(String scope, String throttlingScope) {
+        return AcquireInitialTokenRequestImpl.create(scope, throttlingScope);
     }
 }

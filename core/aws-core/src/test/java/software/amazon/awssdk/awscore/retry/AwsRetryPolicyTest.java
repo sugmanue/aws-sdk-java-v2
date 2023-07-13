@@ -59,6 +59,11 @@ public class AwsRetryPolicyTest {
     }
 
     @Test
+    public void doesNotRetryOnNotImplemented() {
+        assertFalse(shouldRetry(applyStatusCode(501)));
+    }
+
+    @Test
     public void retriesOnBadGateway() {
         assertTrue(shouldRetry(applyStatusCode(502)));
     }

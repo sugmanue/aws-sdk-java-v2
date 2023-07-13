@@ -150,7 +150,8 @@ class AdaptiveRetryStrategyResourceConstrainedTest {
 
         void process(Job job) {
             // submit job
-            AcquireInitialTokenResponse response = strategy.acquireInitialToken(AcquireInitialTokenRequest.create("client"));
+            AcquireInitialTokenResponse response = strategy.acquireInitialToken(AcquireInitialTokenRequest.create("client",
+                                                                                                                  "throttling"));
             RetryToken token = response.token();
             sleep(response.delay());
             do {

@@ -34,6 +34,8 @@ import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.internal.retry.SdkDefaultRetryStrategy;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.core.retry.RetryScopeProvider;
+import software.amazon.awssdk.core.retry.RetryThrottlingScopeProvider;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.metrics.MetricPublisher;
 import software.amazon.awssdk.profiles.ProfileFile;
@@ -58,6 +60,8 @@ public final class ClientOverrideConfiguration
     private final Map<String, List<String>> headers;
     private final RetryPolicy retryPolicy;
     private final RetryStrategy<?, ?> retryStrategy;
+    private final RetryScopeProvider retryScopeProvider;
+    private final RetryThrottlingScopeProvider retryThrottlingScopeProvider;
     private final List<ExecutionInterceptor> executionInterceptors;
     private final AttributeMap advancedOptions;
     private final Duration apiCallAttemptTimeout;
@@ -75,6 +79,8 @@ public final class ClientOverrideConfiguration
         this.headers = CollectionUtils.deepUnmodifiableMap(builder.headers(), () -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER));
         this.retryPolicy = builder.retryPolicy();
         this.retryStrategy = builder.retryStrategy();
+        this.retryScopeProvider = builder.retryScopeProvider();
+        this.retryThrottlingScopeProvider = builder.retryThrottlingScopeProvider();
         this.executionInterceptors = Collections.unmodifiableList(new ArrayList<>(builder.executionInterceptors()));
         this.advancedOptions = builder.advancedOptions();
         this.apiCallTimeout = Validate.isPositiveOrNull(builder.apiCallTimeout(), "apiCallTimeout");
@@ -139,6 +145,24 @@ public final class ClientOverrideConfiguration
      */
     public Optional<RetryStrategy> retryStrategy() {
         return Optional.ofNullable(retryStrategy);
+    }
+
+    /**
+     * The optional retry scope provider that should be used to compute the scope of a retryable request.
+     *
+     * @see Builder#retryScopeProvider(RetryScopeProvider)
+     */
+    public Optional<RetryScopeProvider> retryScopeProvider() {
+        return Optional.ofNullable(retryScopeProvider);
+    }
+
+    /**
+     * The optional retry scope provider that should be used to compute the scope of a retryable request.
+     *
+     * @see Builder#retryThrottlingScopeProvider(RetryThrottlingScopeProvider)
+     */
+    public Optional<RetryThrottlingScopeProvider> retryThrottlingScopeProvider() {
+        return Optional.ofNullable(retryThrottlingScopeProvider);
     }
 
     /**
@@ -367,6 +391,20 @@ public final class ClientOverrideConfiguration
         RetryStrategy<?, ?> retryStrategy();
 
         /**
+         * Configure the provider for retries.
+         */
+        Builder retryScopeProvider(RetryScopeProvider retryScopeProvider);
+
+        RetryScopeProvider retryScopeProvider();
+
+        /**
+         * Configure the provider for throttling retries.
+         */
+        Builder retryThrottlingScopeProvider(RetryThrottlingScopeProvider retryThrottlingScopeProvider);
+
+        RetryThrottlingScopeProvider retryThrottlingScopeProvider();
+
+        /**
          * Configure a list of execution interceptors that will have access to read and modify the request and response objcets as
          * they are processed by the SDK. These will replace any interceptors configured previously with this method or
          * {@link #addExecutionInterceptor(ExecutionInterceptor)}.
@@ -565,6 +603,8 @@ public final class ClientOverrideConfiguration
         private Map<String, List<String>> headers = new HashMap<>();
         private RetryPolicy retryPolicy;
         private RetryStrategy<?, ?> retryStrategy;
+        private RetryScopeProvider retryScopeProvider;
+        private RetryThrottlingScopeProvider retryThrottlingScopeProvider;
         private List<ExecutionInterceptor> executionInterceptors = new ArrayList<>();
         private AttributeMap.Builder advancedOptions = AttributeMap.builder();
         private Duration apiCallTimeout;
@@ -623,6 +663,28 @@ public final class ClientOverrideConfiguration
         @Override
         public RetryStrategy<?, ?> retryStrategy() {
             return this.retryStrategy;
+        }
+
+        @Override
+        public Builder retryScopeProvider(RetryScopeProvider retryScopeProvider) {
+            this.retryScopeProvider = retryScopeProvider;
+            return this;
+        }
+
+        @Override
+        public RetryScopeProvider retryScopeProvider() {
+            return this.retryScopeProvider;
+        }
+
+        @Override
+        public Builder retryThrottlingScopeProvider(RetryThrottlingScopeProvider retryThrottlingScopeProvider) {
+            this.retryThrottlingScopeProvider = retryThrottlingScopeProvider;
+            return this;
+        }
+
+        @Override
+        public RetryThrottlingScopeProvider retryThrottlingScopeProvider() {
+            return this.retryThrottlingScopeProvider;
         }
 
         @Override

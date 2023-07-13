@@ -45,14 +45,14 @@ public final class DefaultAdaptiveRetryStrategy
 
     @Override
     protected Duration computeInitialBackoff(AcquireInitialTokenRequest request) {
-        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(request.scope());
+        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(request.throttlingScope());
         return bucket.tryAcquire().delay();
     }
 
     @Override
     protected Duration computeBackoff(RefreshRetryTokenRequest request, DefaultRetryToken token) {
         Duration backoff = super.computeBackoff(request, token);
-        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.scope());
+        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.throttlingScope());
         return backoff.plus(bucket.tryAcquire().delay());
     }
 
@@ -60,14 +60,14 @@ public final class DefaultAdaptiveRetryStrategy
     protected void updateStateForRetry(RefreshRetryTokenRequest request) {
         if (treatAsThrottling.test(request.failure())) {
             DefaultRetryToken token = asDefaultRetryToken(request.token());
-            RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.scope());
+            RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.throttlingScope());
             bucket.updateRateAfterThrottling();
         }
     }
 
     @Override
     protected void updateStateForSuccess(DefaultRetryToken token) {
-        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.scope());
+        RateLimiterTokenBucket bucket = rateLimiterTokenBucketStore.tokenBucketForScope(token.throttlingScope());
         bucket.updateRateAfterSuccess();
     }
 
