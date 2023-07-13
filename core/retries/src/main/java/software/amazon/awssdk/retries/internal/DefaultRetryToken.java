@@ -32,6 +32,7 @@ import software.amazon.awssdk.utils.builder.ToCopyableBuilder;
 @SdkInternalApi
 public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<DefaultRetryToken.Builder, DefaultRetryToken> {
     private final String scope;
+    private final String throttlingScope;
     private final TokenState state;
     private final int attempt;
     private final int capacityAcquired;
@@ -40,6 +41,7 @@ public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<De
 
     private DefaultRetryToken(Builder builder) {
         this.scope = Validate.paramNotNull(builder.scope, "scope");
+        this.throttlingScope = Validate.paramNotNull(builder.throttlingScope, "throttlingScope");
         this.state = Validate.paramNotNull(builder.state, "status");
         this.attempt = Validate.isPositive(builder.attempt, "attempt");
         this.capacityAcquired = Validate.isNotNegative(builder.capacityAcquired, "capacityAcquired");
@@ -59,6 +61,13 @@ public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<De
      */
     public String scope() {
         return scope;
+    }
+
+    /**
+     * Returns the token throttling scope.
+     */
+    public String throttlingScope() {
+        return throttlingScope;
     }
 
     /**
@@ -140,6 +149,7 @@ public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<De
     public static class Builder implements CopyableBuilder<Builder, DefaultRetryToken> {
         private TokenState state = TokenState.IN_PROGRESS;
         private String scope;
+        private String throttlingScope;
         private int attempt = 1;
         private int capacityAcquired = 0;
         private int capacityRemaining = 0;
@@ -151,6 +161,7 @@ public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<De
 
         Builder(DefaultRetryToken token) {
             this.scope = token.scope;
+            this.throttlingScope = token.throttlingScope;
             this.attempt = token.attempt;
             this.capacityAcquired = token.capacityAcquired;
             this.capacityRemaining = token.capacityRemaining;
@@ -162,6 +173,14 @@ public final class DefaultRetryToken implements RetryToken, ToCopyableBuilder<De
          */
         public Builder scope(String scope) {
             this.scope = scope;
+            return this;
+        }
+
+        /**
+         * Sets the throttling scope of the retry token.
+         */
+        public Builder throttlingScope(String throttlingScope) {
+            this.throttlingScope = throttlingScope;
             return this;
         }
 

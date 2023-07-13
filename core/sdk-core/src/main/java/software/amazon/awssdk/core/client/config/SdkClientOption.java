@@ -28,6 +28,8 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.core.retry.RetryScopeProvider;
+import software.amazon.awssdk.core.retry.RetryThrottlingScopeProvider;
 import software.amazon.awssdk.endpoints.EndpointProvider;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
@@ -57,6 +59,17 @@ public final class SdkClientOption<T> extends ClientOption<T> {
      */
     @SuppressWarnings("rawtypes")
     public static final SdkClientOption<RetryStrategy> RETRY_STRATEGY = new SdkClientOption<>(RetryStrategy.class);
+
+    /**
+     * @see ClientOverrideConfiguration#retryScopeProvider()
+     */
+    public static final SdkClientOption<RetryScopeProvider> RETRY_SCOPE_PROVIDER = new SdkClientOption<>(RetryScopeProvider.class);
+
+    /**
+     * @see ClientOverrideConfiguration#retryScopeProvider()
+     */
+    public static final SdkClientOption<RetryThrottlingScopeProvider> RETRY_THROTTLING_SCOPE_PROVIDER =
+        new SdkClientOption<>(RetryThrottlingScopeProvider.class);
 
     /**
      * @see ClientOverrideConfiguration#executionInterceptors()

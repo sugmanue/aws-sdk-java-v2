@@ -39,7 +39,9 @@ import static software.amazon.awssdk.core.client.config.SdkClientOption.PROFILE_
 import static software.amazon.awssdk.core.client.config.SdkClientOption.PROFILE_FILE_SUPPLIER;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.PROFILE_NAME;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.RETRY_POLICY;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.RETRY_SCOPE_PROVIDER;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.RETRY_STRATEGY;
+import static software.amazon.awssdk.core.client.config.SdkClientOption.RETRY_THROTTLING_SCOPE_PROVIDER;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.SCHEDULED_EXECUTOR_SERVICE;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.SIGNER_OVERRIDDEN;
 import static software.amazon.awssdk.core.client.config.SdkClientOption.SYNC_HTTP_CLIENT;
@@ -81,10 +83,13 @@ import software.amazon.awssdk.core.internal.interceptor.SyncHttpChecksumInTraile
 import software.amazon.awssdk.core.internal.retry.SdkDefaultRetryStrategy;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.core.retry.RetryScopeProvider;
+import software.amazon.awssdk.core.retry.RetryThrottlingScopeProvider;
 import software.amazon.awssdk.core.util.SdkUserAgent;
 import software.amazon.awssdk.http.ExecutableHttpRequest;
 import software.amazon.awssdk.http.HttpExecuteRequest;
 import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.async.AsyncExecuteRequest;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
 import software.amazon.awssdk.metrics.MetricPublisher;
@@ -233,6 +238,8 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
         builder.option(EXECUTION_INTERCEPTORS, clientOverrideConfiguration.executionInterceptors());
         builder.option(RETRY_POLICY, clientOverrideConfiguration.retryPolicy().orElse(null));
         builder.option(RETRY_STRATEGY, clientOverrideConfiguration.retryStrategy().orElse(null));
+        builder.option(RETRY_SCOPE_PROVIDER, clientOverrideConfiguration.retryScopeProvider().orElse(null));
+        builder.option(RETRY_THROTTLING_SCOPE_PROVIDER, clientOverrideConfiguration.retryThrottlingScopeProvider().orElse(null));
         builder.option(ADDITIONAL_HTTP_HEADERS, clientOverrideConfiguration.headers());
         builder.option(SIGNER, clientOverrideConfiguration.advancedOption(SIGNER).orElse(null));
         builder.option(USER_AGENT_SUFFIX, clientOverrideConfiguration.advancedOption(USER_AGENT_SUFFIX).orElse(null));
@@ -328,6 +335,8 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
                      .option(EXECUTION_INTERCEPTORS, resolveExecutionInterceptors(config))
                      .option(RETRY_POLICY, retryPolicy)
                      .option(RETRY_STRATEGY, retryStrategy)
+                     .option(RETRY_SCOPE_PROVIDER, resolveRetryScopeProvider(config))
+                     .option(RETRY_THROTTLING_SCOPE_PROVIDER, resolveRetryThrottlingScopeProvider(config))
                      .option(CLIENT_USER_AGENT, resolveClientUserAgent(config, retryMode))
                      .build();
     }
@@ -373,6 +382,24 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
                                        .defaultRetryMode(config.option(SdkClientOption.DEFAULT_RETRY_MODE))
                                        .resolve();
         return SdkDefaultRetryStrategy.forRetryMode(retryMode);
+    }
+
+    private RetryScopeProvider resolveRetryScopeProvider(SdkClientConfiguration config) {
+        RetryScopeProvider provider = config.option(RETRY_SCOPE_PROVIDER);
+        if (provider == null) {
+            // All requests share the same scope within the same strategy.
+            return r -> "GLOBAL";
+        }
+        return provider;
+    }
+
+    private RetryThrottlingScopeProvider resolveRetryThrottlingScopeProvider(SdkClientConfiguration config) {
+        RetryThrottlingScopeProvider provider = config.option(RETRY_THROTTLING_SCOPE_PROVIDER);
+        if (provider == null) {
+            // The scope is defined by the request URI
+            return request -> request.getUri().toString();
+        }
+        return provider;
     }
 
     /**

@@ -26,9 +26,11 @@ import software.amazon.awssdk.utils.Validate;
 public final class AcquireInitialTokenRequestImpl implements AcquireInitialTokenRequest {
 
     private final String scope;
+    private final String throttlingScope;
 
-    private AcquireInitialTokenRequestImpl(String scope) {
+    private AcquireInitialTokenRequestImpl(String scope, String throttlingScope) {
         this.scope = Validate.paramNotNull(scope, "scope");
+        this.throttlingScope = Validate.paramNotNull(throttlingScope, "throttlingScope");
     }
 
     @Override
@@ -36,10 +38,15 @@ public final class AcquireInitialTokenRequestImpl implements AcquireInitialToken
         return scope;
     }
 
+    @Override
+    public String throttlingScope() {
+        return throttlingScope;
+    }
+
     /**
      * Creates a new {@link AcquireInitialTokenRequestImpl} instance with the given scope.
      */
-    public static AcquireInitialTokenRequest create(String scope) {
-        return new AcquireInitialTokenRequestImpl(scope);
+    public static AcquireInitialTokenRequest create(String scope, String throttlingScope) {
+        return new AcquireInitialTokenRequestImpl(scope, throttlingScope);
     }
 }

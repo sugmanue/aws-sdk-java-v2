@@ -28,6 +28,7 @@ import java.util.concurrent.CompletionException;
 import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.core.Response;
 import software.amazon.awssdk.core.SdkStandardLogger;
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -65,6 +66,8 @@ public final class RetryableStageHelper2 {
     private final RetryStrategy<?, ?> retryStrategy;
     private final HttpClientDependencies dependencies;
     private final List<String> exceptionMessageHistory = new ArrayList<>();
+    private final String retryScope;
+    private final String retryThrottlingScope;
     private int attemptNumber = 0;
     private SdkHttpResponse lastResponse;
     private SdkException lastException;
@@ -72,10 +75,14 @@ public final class RetryableStageHelper2 {
     public RetryableStageHelper2(SdkHttpFullRequest request,
                                  RequestExecutionContext context,
                                  HttpClientDependencies dependencies) {
+        SdkClientConfiguration configuration = dependencies.clientConfiguration();
         this.request = request;
         this.context = context;
-        this.retryPolicy = dependencies.clientConfiguration().option(SdkClientOption.RETRY_POLICY);
-        this.retryStrategy = dependencies.clientConfiguration().option(SdkClientOption.RETRY_STRATEGY);
+        this.retryPolicy = configuration.option(SdkClientOption.RETRY_POLICY);
+        this.retryStrategy = configuration.option(SdkClientOption.RETRY_STRATEGY);
+        this.retryScope = configuration.option(SdkClientOption.RETRY_SCOPE_PROVIDER).retryScope(request);
+        this.retryThrottlingScope =
+            configuration.option(SdkClientOption.RETRY_THROTTLING_SCOPE_PROVIDER).throttlingScope(request);
         this.dependencies = dependencies;
     }
 
@@ -94,8 +101,7 @@ public final class RetryableStageHelper2 {
      * value is {@link AdaptiveRetryStrategy}.
      */
     public Duration acquireInitialToken() {
-        String scope = "GLOBAL";
-        AcquireInitialTokenRequest acquireRequest = AcquireInitialTokenRequest.create(scope);
+        AcquireInitialTokenRequest acquireRequest = AcquireInitialTokenRequest.create(retryScope, retryThrottlingScope);
         AcquireInitialTokenResponse acquireResponse = retryStrategy().acquireInitialToken(acquireRequest);
         RetryToken retryToken = acquireResponse.token();
         Duration delay = acquireResponse.delay();
