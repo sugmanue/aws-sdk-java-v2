@@ -57,6 +57,8 @@ import java.util.function.Supplier;
 import software.amazon.awssdk.annotations.SdkProtectedApi;
 import software.amazon.awssdk.annotations.SdkTestInternalApi;
 import software.amazon.awssdk.core.CompressionConfiguration;
+import software.amazon.awssdk.core.SdkPlugin;
+import software.amazon.awssdk.core.SdkServiceClientConfiguration;
 import software.amazon.awssdk.core.SdkSystemSetting;
 import software.amazon.awssdk.core.client.config.ClientAsyncConfiguration;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -124,6 +126,7 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
 
     private SdkHttpClient.Builder httpClientBuilder;
     private SdkAsyncHttpClient.Builder asyncHttpClientBuilder;
+    private final List<SdkPlugin> registeredPlugins = new ArrayList<>();
 
     protected SdkDefaultClientBuilder() {
         this(DEFAULT_HTTP_CLIENT_BUILDER, DEFAULT_ASYNC_HTTP_CLIENT_BUILDER);
@@ -179,6 +182,7 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
         configuration = finalizeChildConfiguration(configuration);
         configuration = finalizeSyncConfiguration(configuration);
         configuration = finalizeConfiguration(configuration);
+        configuration = invokePluginsIfNeeded(configuration);
 
         return configuration;
     }
@@ -207,6 +211,7 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
         configuration = finalizeChildConfiguration(configuration);
         configuration = finalizeAsyncConfiguration(configuration);
         configuration = finalizeConfiguration(configuration);
+        configuration = invokePluginsIfNeeded(configuration);
 
         return configuration;
     }
@@ -356,6 +361,26 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
                      .option(RETRY_POLICY, retryPolicy)
                      .option(CLIENT_USER_AGENT, resolveClientUserAgent(config, retryPolicy))
                      .build();
+    }
+
+    /**
+     * Invoke all the registered plugins and return the configuration.
+     */
+    protected SdkClientConfiguration invokePluginsIfNeeded(SdkClientConfiguration config) {
+        if (registeredPlugins.isEmpty()) {
+            return config;
+        }
+        // FIXME
+        return config;
+    }
+
+    /**
+     * Invoke all the registered plugins and return the configuration.
+     */
+    void invokePlugins(SdkServiceClientConfiguration.Builder configBuilder) {
+        for (SdkPlugin plugin : registeredPlugins) {
+            plugin.configureClient(configBuilder);
+        }
     }
 
     private String resolveClientUserAgent(SdkClientConfiguration config, RetryPolicy retryPolicy) {
@@ -551,6 +576,12 @@ public abstract class SdkDefaultClientBuilder<B extends SdkClientBuilder<B, C>, 
 
     public final B metricPublishers(List<MetricPublisher> metricPublishers) {
         clientConfiguration.option(METRIC_PUBLISHERS, metricPublishers);
+        return thisBuilder();
+    }
+
+    @Override
+    public final B addPlugin(SdkPlugin plugin) {
+        registeredPlugins.add(Validate.paramNotNull(plugin, "plugin"));
         return thisBuilder();
     }
 
