@@ -64,7 +64,7 @@ public abstract class SdkRequest implements SdkPojo {
          * Returns the list of {@link SdkPlugin} instances registered.
          */
         default List<SdkPlugin> registeredPlugins() {
-            throw new UnsupportedOperationException();
+            return Collections.emptyList();
         }
 
         /**

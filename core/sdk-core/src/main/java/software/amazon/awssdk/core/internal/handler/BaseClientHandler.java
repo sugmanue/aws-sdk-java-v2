@@ -27,6 +27,8 @@ import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
 import software.amazon.awssdk.core.client.config.SdkClientOption;
+import software.amazon.awssdk.core.client.config.internal.InternalizeExternalConfiguration;
+import software.amazon.awssdk.core.client.config.internal.SdkClientConfigurationUtil;
 import software.amazon.awssdk.core.client.handler.ClientExecutionParams;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.http.ExecutionContext;
@@ -52,10 +54,10 @@ import software.amazon.awssdk.utils.StringUtils;
 
 @SdkInternalApi
 public abstract class BaseClientHandler {
-    private SdkClientConfiguration clientConfiguration;
+    private final SdkClientConfiguration clientConfiguration54;
 
     protected BaseClientHandler(SdkClientConfiguration clientConfiguration) {
-        this.clientConfiguration = clientConfiguration;
+        this.clientConfiguration54 = clientConfiguration;
     }
 
     /**
@@ -191,7 +193,17 @@ public abstract class BaseClientHandler {
     // This method is only called from tests, since the subclasses in aws-core override it.
     protected <InputT extends SdkRequest, OutputT extends SdkResponse> ExecutionContext
         invokeInterceptorsAndCreateExecutionContext(
-        ClientExecutionParams<InputT, OutputT> params) {
+            ClientExecutionParams<InputT, OutputT> params
+    ) {
+        return invokeInterceptorsAndCreateExecutionContext(params, clientConfiguration54);
+    }
+
+    // This method is only called from tests, since the subclasses in aws-core override it.
+    protected <InputT extends SdkRequest, OutputT extends SdkResponse> ExecutionContext
+        invokeInterceptorsAndCreateExecutionContext(
+            ClientExecutionParams<InputT, OutputT> params,
+            SdkClientConfiguration clientConfiguration
+    ) {
         SdkRequest originalRequest = params.getInput();
 
         ExecutionAttributes executionAttributes = params.executionAttributes();
@@ -228,8 +240,25 @@ public abstract class BaseClientHandler {
                                .build();
     }
 
+    protected <OutputT extends SdkResponse, InputT extends SdkRequest> SdkClientConfiguration
+        createRequestConfiguration(
+            ClientExecutionParams<InputT, OutputT> executionParams
+    ) {
+        SdkRequest request = executionParams.getInput();
+        if (request == null) {
+            return clientConfiguration54;
+        }
+        return SdkClientConfigurationUtil.invokePlugins(clientConfiguration54,
+                                                        request.registeredPlugins(),
+                                                        configurationExternalizer());
+    }
+
+    protected InternalizeExternalConfiguration configurationExternalizer() {
+        return (consumer, config) -> config.build();
+    }
+
     protected boolean isCalculateCrc32FromCompressedData() {
-        return clientConfiguration.option(SdkClientOption.CRC32_FROM_COMPRESSED_DATA_ENABLED);
+        return clientConfiguration54.option(SdkClientOption.CRC32_FROM_COMPRESSED_DATA_ENABLED);
     }
 
     protected void validateSigningConfiguration(SdkHttpRequest request, Signer signer) {

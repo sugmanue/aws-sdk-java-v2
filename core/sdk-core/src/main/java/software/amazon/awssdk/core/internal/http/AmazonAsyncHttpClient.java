@@ -20,6 +20,7 @@ import static software.amazon.awssdk.core.internal.http.pipeline.RequestPipeline
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.annotations.ThreadSafe;
 import software.amazon.awssdk.core.ClientType;
@@ -121,6 +122,16 @@ public final class AmazonAsyncHttpClient implements SdkAutoCloseable {
          */
         RequestExecutionBuilder originalRequest(SdkRequest originalRequest);
 
+        RequestExecutionBuilder httpClientDependencies(HttpClientDependencies httpClientDependencies);
+
+        HttpClientDependencies httpClientDependencies();
+
+        default RequestExecutionBuilder httpClientDependencies(Consumer<HttpClientDependencies.Builder> mutator) {
+            HttpClientDependencies.Builder builder = httpClientDependencies().toBuilder();
+            mutator.accept(builder);
+            return httpClientDependencies(builder.build());
+        }
+
         /**
          * Executes the request with the given configuration.
          *
@@ -140,9 +151,15 @@ public final class AmazonAsyncHttpClient implements SdkAutoCloseable {
         private SdkRequest originalRequest;
         private ExecutionContext executionContext;
 
+        @Override
         public RequestExecutionBuilder httpClientDependencies(HttpClientDependencies httpClientDependencies) {
             this.httpClientDependencies = httpClientDependencies;
             return this;
+        }
+
+        @Override
+        public HttpClientDependencies httpClientDependencies() {
+            return httpClientDependencies;
         }
 
         @Override
