@@ -105,6 +105,11 @@ public abstract class AbstractMarshallingRegistry {
         protected Builder() {
         }
 
+        protected Builder(AbstractMarshallingRegistry marshallingRegistry) {
+            this.registry.putAll(marshallingRegistry.registry);
+            this.marshallingTypes.addAll(marshallingRegistry.marshallingTypes);
+        }
+
         protected <T> Builder register(MarshallLocation marshallLocation,
                                        MarshallingType<T> marshallingType,
                                        Object marshaller) {

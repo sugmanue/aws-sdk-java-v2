@@ -15,6 +15,7 @@
 
 package software.amazon.awssdk.protocols.json.internal.unmarshall;
 
+import java.util.Objects;
 import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.core.protocol.MarshallLocation;
 import software.amazon.awssdk.core.protocol.MarshallingType;
@@ -24,22 +25,21 @@ import software.amazon.awssdk.protocols.core.AbstractMarshallingRegistry;
  * Registry of {@link JsonUnmarshaller} implementations by location and type.
  */
 @SdkInternalApi
-public final class JsonUnmarshallerRegistry extends AbstractMarshallingRegistry {
+public final class JsonProtocolUnmarshallerRegistry {
+    private final JsonUnmarshallerRegistry registry;
+    private final JsonUnmarshallerRegistry instantRegistry;
 
-    private JsonUnmarshallerRegistry(Builder builder) {
-        super(builder);
+    private JsonProtocolUnmarshallerRegistry(Builder builder) {
+        this.registry = Objects.requireNonNull(builder.registry, "registry");
+        this.instantRegistry = Objects.requireNonNull(builder.instantRegistry, "instantRegistry");
     }
 
     @SuppressWarnings("unchecked")
     public <T> JsonUnmarshaller<Object> getUnmarshaller(MarshallLocation marshallLocation, MarshallingType<T> marshallingType) {
-        return (JsonUnmarshaller<Object>) get(marshallLocation, marshallingType);
-    }
-
-    /**
-     * Returns a builder to modify this registry.
-     */
-    public Builder toBuilder() {
-        return new Builder(this);
+        if (marshallingType == MarshallingType.INSTANT) {
+            return (JsonUnmarshaller<Object>) instantRegistry.getUnmarshaller(marshallLocation, marshallingType);
+        }
+        return (JsonUnmarshaller<Object>) registry.getUnmarshaller(marshallLocation, marshallingType);
     }
 
     /**
@@ -52,38 +52,34 @@ public final class JsonUnmarshallerRegistry extends AbstractMarshallingRegistry 
     /**
      * Builder for a {@link JsonUnmarshallerRegistry}.
      */
-    public static final class Builder extends AbstractMarshallingRegistry.Builder {
-
-        private Builder(JsonUnmarshallerRegistry unmarshallerRegistry) {
-            super(unmarshallerRegistry);
-        }
+    public static final class Builder {
+        private JsonUnmarshallerRegistry registry;
+        private JsonUnmarshallerRegistry instantRegistry;
 
         private Builder() {
         }
 
-        public <T> Builder payloadUnmarshaller(MarshallingType<T> marshallingType,
-                                               JsonUnmarshaller<T> marshaller) {
-            register(MarshallLocation.PAYLOAD, marshallingType, marshaller);
+        /**
+         * Add the default registry.
+         */
+        public <T> Builder registry(JsonUnmarshallerRegistry registry) {
+            this.registry = registry;
             return this;
         }
 
-        public <T> Builder headerUnmarshaller(MarshallingType<T> marshallingType,
-                                              JsonUnmarshaller<T> marshaller) {
-            register(MarshallLocation.HEADER, marshallingType, marshaller);
-            return this;
-        }
-
-        public <T> Builder statusCodeUnmarshaller(MarshallingType<T> marshallingType,
-                                                  JsonUnmarshaller<T> marshaller) {
-            register(MarshallLocation.STATUS_CODE, marshallingType, marshaller);
+        /**
+         * Add the protocol specific instant registry.
+         */
+        public <T> Builder instantRegistry(JsonUnmarshallerRegistry instantRegistry) {
+            this.instantRegistry = instantRegistry;
             return this;
         }
 
         /**
          * @return An immutable {@link JsonUnmarshallerRegistry} object.
          */
-        public JsonUnmarshallerRegistry build() {
-            return new JsonUnmarshallerRegistry(this);
+        public JsonProtocolUnmarshallerRegistry build() {
+            return new JsonProtocolUnmarshallerRegistry(this);
         }
     }
 }

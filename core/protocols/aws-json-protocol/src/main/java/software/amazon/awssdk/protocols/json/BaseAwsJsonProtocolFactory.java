@@ -17,6 +17,7 @@ package software.amazon.awssdk.protocols.json;
 
 import static java.util.Collections.unmodifiableList;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -37,6 +38,7 @@ import software.amazon.awssdk.core.protocol.MarshallLocation;
 import software.amazon.awssdk.core.traits.TimestampFormatTrait;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
 import software.amazon.awssdk.http.SdkHttpFullResponse;
+import software.amazon.awssdk.protocols.core.AbstractMarshallingRegistry;
 import software.amazon.awssdk.protocols.core.ExceptionMetadata;
 import software.amazon.awssdk.protocols.core.OperationInfo;
 import software.amazon.awssdk.protocols.core.OperationMetadataAttribute;
@@ -49,7 +51,9 @@ import software.amazon.awssdk.protocols.json.internal.unmarshall.AwsJsonProtocol
 import software.amazon.awssdk.protocols.json.internal.unmarshall.AwsJsonResponseHandler;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonProtocolUnmarshaller;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonResponseHandler;
+import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshallerRegistry;
 import software.amazon.awssdk.protocols.jsoncore.JsonNodeParser;
+import software.amazon.awssdk.protocols.jsoncore.JsonValueNodeFactory;
 
 @SdkProtectedApi
 public abstract class BaseAwsJsonProtocolFactory {
@@ -88,8 +92,11 @@ public abstract class BaseAwsJsonProtocolFactory {
             .builder()
             .parser(JsonNodeParser.builder()
                                   .jsonFactory(getSdkFactory().getJsonFactory())
+                                  .jsonValueNodeFactory(getJsonValueNodeFactory())
                                   .build())
             .defaultTimestampFormats(getDefaultTimestampFormats())
+            .instantRegistryFactory(builder.unmarshallInstantRegistryFactory)
+            .registry(builder.unmarshallRegistry)
             .build();
     }
 
@@ -180,6 +187,13 @@ public abstract class BaseAwsJsonProtocolFactory {
     }
 
     /**
+     * @return Default JsonNode value factory.
+     */
+    protected JsonValueNodeFactory getJsonValueNodeFactory() {
+        return JsonValueNodeFactory.DEFAULT;
+    }
+
+    /**
      * @return Instance of {@link StructuredJsonFactory} to use in creating handlers.
      */
     protected StructuredJsonFactory getSdkFactory() {
@@ -208,6 +222,7 @@ public abstract class BaseAwsJsonProtocolFactory {
                                             .build();
     }
 
+
     /**
      * Builder for {@link AwsJsonProtocolFactory}.
      */
@@ -219,6 +234,10 @@ public abstract class BaseAwsJsonProtocolFactory {
         private String customErrorCodeFieldName;
         private SdkClientConfiguration clientConfiguration;
         private boolean hasAwsQueryCompatible;
+        protected JsonUnmarshallerRegistry unmarshallRegistry = JsonProtocolUnmarshaller.registry();
+        protected JsonProtocolUnmarshaller.InstantRegistryFactory unmarshallInstantRegistryFactory =
+            JsonProtocolUnmarshaller::instantRegistryFactory;
+
 
         protected Builder() {
         }
@@ -313,10 +332,41 @@ public abstract class BaseAwsJsonProtocolFactory {
             return getSubclass();
         }
 
+
+        /**
+         * Provides the unmarshalling registry to be used to unmarshall requests. This is only expected to be used by extending
+         * protocols, such as RPCv2, that requires a different registry to be able to read embedded objects instead of
+         * converting them to string and then back into a value.
+         *
+         * @param unmarshallRegistry the unmarshall registry to be used for unmarshalling
+         * @return This builder for method chaining.
+         */
+        protected final SubclassT unmarshallRegistry(
+            JsonUnmarshallerRegistry unmarshallRegistry
+        ) {
+            this.unmarshallRegistry = unmarshallRegistry;
+            return getSubclass();
+        }
+
+        /**
+         * Provides the unmarshalling instant registry factory to be used to unmarshall {@link Instant} values in requests.
+         * This is only expected to be used by extending protocols, such as RPCv2, that requires a different registry to be
+         * able to read embedded objects instead of converting them to string and then back into a value.
+         *
+         * @param unmarshallInstantRegistryFactory the unmarshall registry to be used for unmarshalling
+         * @return This builder for method chaining.
+         */
+        public final SubclassT unmarshallInstantRegistryFactory(
+            JsonProtocolUnmarshaller.InstantRegistryFactory unmarshallInstantRegistryFactory
+        ) {
+            this.unmarshallInstantRegistryFactory = unmarshallInstantRegistryFactory;
+            return getSubclass();
+        }
+
         @SuppressWarnings("unchecked")
         private SubclassT getSubclass() {
             return (SubclassT) this;
         }
-
     }
+
 }

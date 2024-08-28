@@ -30,10 +30,12 @@ public final class JsonUnmarshallerContext {
 
     private final SdkHttpFullResponse response;
     private final JsonUnmarshallerRegistry unmarshallerRegistry;
+    private final JsonProtocolUnmarshallerRegistry protocolUnmarshallerRegistry;
 
     private JsonUnmarshallerContext(Builder builder) {
         this.response = builder.response;
         this.unmarshallerRegistry = builder.unmarshallerRegistry;
+        this.protocolUnmarshallerRegistry = builder.protocolUnmarshallerRegistry;
     }
 
     /**
@@ -57,7 +59,10 @@ public final class JsonUnmarshallerContext {
         if (MarshallerUtil.isInUri(location)) {
             location = MarshallLocation.PAYLOAD;
         }
-        return unmarshallerRegistry.getUnmarshaller(location, marshallingType);
+        if (unmarshallerRegistry != null) {
+            return unmarshallerRegistry.getUnmarshaller(location, marshallingType);
+        }
+        return protocolUnmarshallerRegistry.getUnmarshaller(location, marshallingType);
     }
 
     /**
@@ -74,6 +79,7 @@ public final class JsonUnmarshallerContext {
 
         private SdkHttpFullResponse response;
         private JsonUnmarshallerRegistry unmarshallerRegistry;
+        private JsonProtocolUnmarshallerRegistry protocolUnmarshallerRegistry;
 
         private Builder() {
         }
@@ -85,6 +91,11 @@ public final class JsonUnmarshallerContext {
 
         public Builder unmarshallerRegistry(JsonUnmarshallerRegistry unmarshallerRegistry) {
             this.unmarshallerRegistry = unmarshallerRegistry;
+            return this;
+        }
+
+        public Builder protocolUnmarshallerRegistry(JsonProtocolUnmarshallerRegistry protocolUnmarshallerRegistry) {
+            this.protocolUnmarshallerRegistry = protocolUnmarshallerRegistry;
             return this;
         }
 
