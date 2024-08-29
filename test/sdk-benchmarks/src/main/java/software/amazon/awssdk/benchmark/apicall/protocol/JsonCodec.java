@@ -41,7 +41,6 @@ import software.amazon.awssdk.protocols.json.BaseAwsJsonProtocolFactory;
 import software.amazon.awssdk.protocols.json.StructuredJsonFactory;
 import software.amazon.awssdk.protocols.json.internal.marshall.JsonProtocolMarshallerBuilder;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonProtocolUnmarshaller;
-import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshallerRegistry;
 import software.amazon.awssdk.protocols.jsoncore.JsonNodeParser;
 import software.amazon.awssdk.protocols.jsoncore.JsonValueNodeFactory;
 import software.amazon.awssdk.protocols.rpcv2.SmithyRpcV2CborProtocolFactory;
@@ -77,8 +76,7 @@ public final class JsonCodec {
                                           .jsonValueNodeFactory(behavior.jsonValueNodeFactory())
                                           .build())
                     .defaultTimestampFormats(behavior.timestampFormats())
-                    .registry(behavior.registry())
-                    .instantRegistryFactory(behavior.unmarshallInstantRegistryFactory())
+                    .timestampFormatRegistryFactory(behavior.timestampFormatRegistryFactory())
                     .build();
             SdkHttpFullResponse response = SdkHttpFullResponse
                 .builder()
@@ -163,13 +161,8 @@ public final class JsonCodec {
             }
 
             @Override
-            public JsonProtocolUnmarshaller.InstantRegistryFactory unmarshallInstantRegistryFactory() {
-                return SdkRpcV2CborUnmarshaller::instantRegistryFactory;
-            }
-
-            @Override
-            public JsonUnmarshallerRegistry registry() {
-                return SdkRpcV2CborUnmarshaller.getUnmarshallerRegistry();
+            public JsonProtocolUnmarshaller.TimestampFormatRegistryFactory timestampFormatRegistryFactory() {
+                return SdkRpcV2CborUnmarshaller::timestampFormatRegistryFactory;
             }
 
             @Override
@@ -224,12 +217,8 @@ public final class JsonCodec {
             return TIMESTAMP_FORMATS;
         }
 
-        public JsonProtocolUnmarshaller.InstantRegistryFactory unmarshallInstantRegistryFactory() {
-            return JsonProtocolUnmarshaller::instantRegistryFactory;
-        }
-
-        public JsonUnmarshallerRegistry registry() {
-            return JsonProtocolUnmarshaller.getShared();
+        public JsonProtocolUnmarshaller.TimestampFormatRegistryFactory timestampFormatRegistryFactory() {
+            return JsonProtocolUnmarshaller::timestampFormatRegistryFactory;
         }
 
         public OperationInfo operationInfo() {

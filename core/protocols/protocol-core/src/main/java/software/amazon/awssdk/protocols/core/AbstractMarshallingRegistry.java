@@ -106,7 +106,7 @@ public abstract class AbstractMarshallingRegistry {
         }
 
         protected Builder(AbstractMarshallingRegistry marshallingRegistry) {
-            this.registry.putAll(marshallingRegistry.registry);
+            deepCopy(this.registry, marshallingRegistry.registry);
             this.marshallingTypes.addAll(marshallingRegistry.marshallingTypes);
         }
 
@@ -117,6 +117,15 @@ public abstract class AbstractMarshallingRegistry {
             registry.computeIfAbsent(marshallLocation, k -> new HashMap<>());
             registry.get(marshallLocation).put(marshallingType, marshaller);
             return this;
+        }
+    }
+
+    private static void deepCopy(
+        Map<MarshallLocation, Map<MarshallingType, Object>> target,
+        Map<MarshallLocation, Map<MarshallingType, Object>> source
+    ) {
+        for (Map.Entry<MarshallLocation, Map<MarshallingType, Object>> sourceKvp : source.entrySet()) {
+            target.computeIfAbsent(sourceKvp.getKey(), (x) -> new HashMap<>()).putAll(sourceKvp.getValue());
         }
     }
 }

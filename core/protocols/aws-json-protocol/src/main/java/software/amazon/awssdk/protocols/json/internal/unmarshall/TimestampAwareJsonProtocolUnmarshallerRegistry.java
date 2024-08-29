@@ -15,42 +15,47 @@
 
 package software.amazon.awssdk.protocols.json.internal.unmarshall;
 
-import java.util.Objects;
 import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.core.protocol.MarshallLocation;
 import software.amazon.awssdk.core.protocol.MarshallingType;
-import software.amazon.awssdk.protocols.core.AbstractMarshallingRegistry;
+import software.amazon.awssdk.core.traits.TimestampFormatTrait;
+import software.amazon.awssdk.utils.Validate;
 
 /**
- * Registry of {@link JsonUnmarshaller} implementations by location and type.
+ * Registry of {@link JsonUnmarshaller} implementations by location and type. This implementation has special logic to handle
+ * Instant values to support {@link TimestampFormatTrait} default values. It does so by splitting the responsability in two
+ * separated registries, one that is used exclusively for marshalling type {@link MarshallingType#INSTANT} and another one for
+ * the rest. This allow us to combine shared static registries with more dynamic ones that change depending on the set of
+ * default values for timestamp formats.
  */
 @SdkInternalApi
-public final class JsonProtocolUnmarshallerRegistry {
+public final class TimestampAwareJsonProtocolUnmarshallerRegistry implements JsonUnmarshallerRegistry {
     private final JsonUnmarshallerRegistry registry;
     private final JsonUnmarshallerRegistry instantRegistry;
 
-    private JsonProtocolUnmarshallerRegistry(Builder builder) {
-        this.registry = Objects.requireNonNull(builder.registry, "registry");
-        this.instantRegistry = Objects.requireNonNull(builder.instantRegistry, "instantRegistry");
+    private TimestampAwareJsonProtocolUnmarshallerRegistry(Builder builder) {
+        this.registry = Validate.notNull(builder.registry, "registry");
+        this.instantRegistry = Validate.notNull(builder.instantRegistry, "instantRegistry");
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public <T> JsonUnmarshaller<Object> getUnmarshaller(MarshallLocation marshallLocation, MarshallingType<T> marshallingType) {
         if (marshallingType == MarshallingType.INSTANT) {
-            return (JsonUnmarshaller<Object>) instantRegistry.getUnmarshaller(marshallLocation, marshallingType);
+            return instantRegistry.getUnmarshaller(marshallLocation, marshallingType);
         }
-        return (JsonUnmarshaller<Object>) registry.getUnmarshaller(marshallLocation, marshallingType);
+        return registry.getUnmarshaller(marshallLocation, marshallingType);
     }
 
     /**
-     * @return Builder instance to construct a {@link JsonUnmarshallerRegistry}.
+     * @return Builder instance to construct a {@link DefaultJsonUnmarshallerRegistry}.
      */
     public static Builder builder() {
         return new Builder();
     }
 
     /**
-     * Builder for a {@link JsonUnmarshallerRegistry}.
+     * Builder for a {@link DefaultJsonUnmarshallerRegistry}.
      */
     public static final class Builder {
         private JsonUnmarshallerRegistry registry;
@@ -76,10 +81,10 @@ public final class JsonProtocolUnmarshallerRegistry {
         }
 
         /**
-         * @return An immutable {@link JsonUnmarshallerRegistry} object.
+         * @return An immutable {@link DefaultJsonUnmarshallerRegistry} object.
          */
-        public JsonProtocolUnmarshallerRegistry build() {
-            return new JsonProtocolUnmarshallerRegistry(this);
+        public JsonUnmarshallerRegistry build() {
+            return new TimestampAwareJsonProtocolUnmarshallerRegistry(this);
         }
     }
 }

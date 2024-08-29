@@ -49,35 +49,29 @@ import software.amazon.awssdk.utils.Lazy;
 import software.amazon.awssdk.utils.builder.Buildable;
 
 /**
- * Unmarshaller implementation for both JSON RPC and REST JSON services. This class is thread-safe and it is
- * recommended to reuse a single instance for best performance.
+ * Unmarshaller implementation for both JSON RPC and REST JSON services. This class is thread-safe and it is recommended to reuse
+ * a single instance for best performance.
  */
 @SdkInternalApi
 @ThreadSafe
 public class JsonProtocolUnmarshaller {
-    private static final Lazy<JsonUnmarshallerRegistry> DEFAULT =
+    private static final Lazy<DefaultJsonUnmarshallerRegistry> DEFAULT =
         new Lazy<>(() -> createSharedUnmarshallerRegistry());
 
-    private final JsonProtocolUnmarshallerRegistry protocolRegistry;
-    private final InstantRegistryFactory instantRegistryFactory;
+    private final JsonUnmarshallerRegistry registry;
     private final JsonNodeParser parser;
 
     private JsonProtocolUnmarshaller(Builder builder) {
         this.parser = builder.parser;
-        this.instantRegistryFactory = builder.instantRegistryFactory;
-        this.protocolRegistry = JsonProtocolUnmarshallerRegistry
-            .builder()
-            .instantRegistry(builder.instantRegistryFactory.get(builder.defaultTimestampFormats))
-            .registry(builder.registry)
-            .build();
+        this.registry = builder.timestampFormatRegistryFactory.get(builder.defaultTimestampFormats);
     }
 
-    public static JsonUnmarshallerRegistry getShared() {
+    public static DefaultJsonUnmarshallerRegistry getShared() {
         return DEFAULT.getValue();
     }
 
-    public static JsonUnmarshallerRegistry createSharedUnmarshallerRegistry() {
-        return JsonUnmarshallerRegistry
+    public static DefaultJsonUnmarshallerRegistry createSharedUnmarshallerRegistry() {
+        return DefaultJsonUnmarshallerRegistry
             .builder()
             .statusCodeUnmarshaller(MarshallingType.INTEGER, (context, json, f) -> context.response().statusCode())
             .headerUnmarshaller(MarshallingType.STRING, HeaderUnmarshaller.STRING)
@@ -190,7 +184,7 @@ public class JsonProtocolUnmarshaller {
     }
 
     public <TypeT extends SdkPojo> TypeT unmarshall(SdkPojo sdkPojo,
-                            SdkHttpFullResponse response) throws IOException {
+                                                    SdkHttpFullResponse response) throws IOException {
         JsonNode jsonNode = hasJsonPayload(sdkPojo, response) ? parser.parse(response.content().get()) : null;
         return unmarshall(sdkPojo, response, jsonNode);
     }
@@ -220,10 +214,10 @@ public class JsonProtocolUnmarshaller {
     }
 
     public <TypeT extends SdkPojo> TypeT unmarshall(SdkPojo sdkPojo,
-                            SdkHttpFullResponse response,
-                            JsonNode jsonContent) {
+                                                    SdkHttpFullResponse response,
+                                                    JsonNode jsonContent) {
         JsonUnmarshallerContext context = JsonUnmarshallerContext.builder()
-                                                                 .protocolUnmarshallerRegistry(protocolRegistry)
+                                                                 .unmarshallerRegistry(registry)
                                                                  .response(response)
                                                                  .build();
         return unmarshallStructured(sdkPojo, jsonContent, context);
@@ -275,23 +269,29 @@ public class JsonProtocolUnmarshaller {
         return new Builder();
     }
 
-    public static JsonUnmarshallerRegistry registry() {
-        return JsonProtocolUnmarshaller.getShared();
+    /**
+     * Default implementation for {@link TimestampFormatRegistryFactory}, which parses {@link Instant} values from {@link JsonNode}
+     */
+    public static JsonUnmarshallerRegistry timestampFormatRegistryFactory(Map<MarshallLocation, TimestampFormatTrait.Format> formats) {
+        DefaultJsonUnmarshallerRegistry instantRegistry = registryForInstant(formats);
+        return TimestampAwareJsonProtocolUnmarshallerRegistry.builder()
+                                                             .instantRegistry(instantRegistry)
+                                                             .registry(getShared())
+                                                             .build();
     }
 
-    /**
-     * Default implementation for {@link InstantRegistryFactory}, which parses {@link Instant} values from {@link JsonNode}
-     */
-    public static JsonUnmarshallerRegistry instantRegistryFactory(Map<MarshallLocation, TimestampFormatTrait.Format> formats) {
+
+    public static DefaultJsonUnmarshallerRegistry registryForInstant(Map<MarshallLocation, TimestampFormatTrait.Format> formats) {
         StringToValueConverter.StringToValue<Instant> instantStringToValue = StringToInstant.
             create(formats.isEmpty() ?
                    new EnumMap<>(MarshallLocation.class) :
                    new EnumMap<>(formats));
-        return JsonUnmarshallerRegistry.builder()
-                                       .headerUnmarshaller(MarshallingType.INSTANT,
+        return DefaultJsonUnmarshallerRegistry.builder()
+                                              .headerUnmarshaller(MarshallingType.INSTANT,
                                                            HeaderUnmarshaller.createInstantHeaderUnmarshaller(instantStringToValue))
-                                       .payloadUnmarshaller(MarshallingType.INSTANT, new SimpleTypeJsonUnmarshaller<>(instantStringToValue))
-                                       .build();
+                                              .payloadUnmarshaller(MarshallingType.INSTANT,
+                                                            new SimpleTypeJsonUnmarshaller<>(instantStringToValue))
+                                              .build();
     }
 
     /**
@@ -301,8 +301,8 @@ public class JsonProtocolUnmarshaller {
 
         private JsonNodeParser parser;
         private Map<MarshallLocation, TimestampFormatTrait.Format> defaultTimestampFormats;
-        private InstantRegistryFactory instantRegistryFactory = JsonProtocolUnmarshaller::instantRegistryFactory;
-        private JsonUnmarshallerRegistry registry = DEFAULT.getValue();
+        private TimestampFormatRegistryFactory timestampFormatRegistryFactory =
+            JsonProtocolUnmarshaller::timestampFormatRegistryFactory;
 
         private Builder() {
         }
@@ -326,22 +326,13 @@ public class JsonProtocolUnmarshaller {
         }
 
         /**
-         * @param instantRegistryFactory The default instant registry unmarshaller factory.
+         * @param timestampFormatRegistryFactory The default instant registry unmarshaller factory.
          * @return This builder for method chaining.
          */
-        public Builder instantRegistryFactory(
-            InstantRegistryFactory instantRegistryFactory
+        public Builder timestampFormatRegistryFactory(
+            TimestampFormatRegistryFactory timestampFormatRegistryFactory
         ) {
-            this.instantRegistryFactory = instantRegistryFactory;
-            return this;
-        }
-
-        /**
-         * @param registry The default json unmarshaller registry.
-         * @return This builder for method chaining.
-         */
-        public Builder registry(JsonUnmarshallerRegistry registry) {
-            this.registry = registry;
+            this.timestampFormatRegistryFactory = timestampFormatRegistryFactory;
             return this;
         }
 
@@ -354,11 +345,10 @@ public class JsonProtocolUnmarshaller {
     }
 
     /**
-     * Interface used to create an {@link JsonUnmarshallerRegistry} just to be used to unmarshall {@link Instant} values. This
-     * behavior is separated to account for different, protocol specific, ways to unmarshall instants for a location and
-     * default format.
+     * Interface used to create an {@link DefaultJsonUnmarshallerRegistry} that will unmarshall using the given default formats for
+     * each of the locations in the formats map.
      */
-    public interface InstantRegistryFactory {
+    public interface TimestampFormatRegistryFactory {
         JsonUnmarshallerRegistry get(Map<MarshallLocation, TimestampFormatTrait.Format> formats);
     }
 }

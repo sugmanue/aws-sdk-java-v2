@@ -28,32 +28,31 @@ import software.amazon.awssdk.core.traits.TimestampFormatTrait;
 import software.amazon.awssdk.protocols.core.NumberToInstant;
 import software.amazon.awssdk.protocols.core.StringToInstant;
 import software.amazon.awssdk.protocols.core.StringToValueConverter;
+import software.amazon.awssdk.protocols.json.internal.unmarshall.TimestampAwareJsonProtocolUnmarshallerRegistry;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonProtocolUnmarshaller;
+import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshallerRegistry;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshaller;
 import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshallerContext;
-import software.amazon.awssdk.protocols.json.internal.unmarshall.JsonUnmarshallerRegistry;
+import software.amazon.awssdk.protocols.json.internal.unmarshall.DefaultJsonUnmarshallerRegistry;
 import software.amazon.awssdk.protocols.jsoncore.JsonNode;
+import software.amazon.awssdk.protocols.jsoncore.internal.EmbeddedObjectJsonNode;
 import software.amazon.awssdk.utils.Lazy;
 
 @SdkInternalApi
 public final class SdkRpcV2CborUnmarshaller {
 
-    private static final Lazy<JsonUnmarshallerRegistry> DEFAULT =
+    private static final Lazy<DefaultJsonUnmarshallerRegistry> DEFAULT =
         new Lazy<>(SdkRpcV2CborUnmarshaller::createUnmarshallerRegistry);
 
     private SdkRpcV2CborUnmarshaller() {
     }
 
-    public static JsonUnmarshallerRegistry getUnmarshallerRegistry() {
-        return DEFAULT.getValue();
-    }
-
-    public static JsonUnmarshallerRegistry instantRegistryFactory(Map<MarshallLocation, TimestampFormatTrait.Format> formats) {
-        JsonUnmarshallerRegistry.Builder builder = JsonProtocolUnmarshaller.instantRegistryFactory(formats).toBuilder();
+    public static JsonUnmarshallerRegistry timestampFormatRegistryFactory(Map<MarshallLocation, TimestampFormatTrait.Format> formats) {
+        DefaultJsonUnmarshallerRegistry.Builder builder = JsonProtocolUnmarshaller.registryForInstant(formats).toBuilder();
         StringToValueConverter.StringToValue<Instant> instantStringToValue = StringToInstant
             .create(formats.isEmpty() ?
-                   new EnumMap<>(MarshallLocation.class) :
-                   new EnumMap<>(formats));
+                    new EnumMap<>(MarshallLocation.class) :
+                    new EnumMap<>(formats));
 
         NumberToInstant instantNumberToValue = NumberToInstant
             .create(formats.isEmpty() ?
@@ -63,14 +62,18 @@ public final class SdkRpcV2CborUnmarshaller {
         SimpleTypeInstantJsonUnmarshaller<Instant> payloadUnmarshaller =
             new SimpleTypeInstantJsonUnmarshaller<>(instantStringToValue, instantNumberToValue);
 
-        return builder
+        JsonUnmarshallerRegistry instantRegistry = builder
             .payloadUnmarshaller(MarshallingType.INSTANT, payloadUnmarshaller)
             .build();
+        JsonUnmarshallerRegistry shared = DEFAULT.getValue();
+        return TimestampAwareJsonProtocolUnmarshallerRegistry.builder()
+                                                             .instantRegistry(instantRegistry)
+                                                             .registry(shared)
+                                                             .build();
     }
 
-
-    static JsonUnmarshallerRegistry createUnmarshallerRegistry() {
-        JsonUnmarshallerRegistry.Builder builder = JsonProtocolUnmarshaller.getShared().toBuilder();
+    static DefaultJsonUnmarshallerRegistry createUnmarshallerRegistry() {
+        DefaultJsonUnmarshallerRegistry.Builder builder = JsonProtocolUnmarshaller.getShared().toBuilder();
         builder.payloadUnmarshaller(MarshallingType.INTEGER, forEmbeddable(Number.class, Number::intValue,
                                                                            StringToValueConverter.TO_INTEGER))
                .payloadUnmarshaller(MarshallingType.LONG, forEmbeddable(Number.class, Number::longValue,
@@ -81,8 +84,7 @@ public final class SdkRpcV2CborUnmarshaller {
                                                                          StringToValueConverter.TO_SHORT))
                .payloadUnmarshaller(MarshallingType.FLOAT, forEmbeddable(Number.class, Number::floatValue,
                                                                          StringToValueConverter.TO_FLOAT))
-               .payloadUnmarshaller(MarshallingType.DOUBLE, forEmbeddable(Number.class,
-                                                                          Number::doubleValue,
+               .payloadUnmarshaller(MarshallingType.DOUBLE, forEmbeddable(Number.class, Number::doubleValue,
                                                                           StringToValueConverter.TO_DOUBLE))
                .payloadUnmarshaller(MarshallingType.BIG_DECIMAL, forEmbeddable(BigDecimal.class,
                                                                                StringToValueConverter.TO_BIG_DECIMAL))
@@ -91,6 +93,17 @@ public final class SdkRpcV2CborUnmarshaller {
         return builder.build();
     }
 
+    /**
+     * Creates an unmarshaller that expects the {@code embeddedType} from an {@link EmbeddedObjectJsonNode}. If the node given
+     * for unmarshalling is of this type, and the type of its value is instance of {@code embeddedType}, then the
+     * {@code transformer} is used to convert the expected type into the target type. For instance, to read an integer from an
+     * {@link EmbeddedObjectJsonNode} the caller will use.
+     * <pre>
+     *     forEmbeddable(Number.class, Number::intValue, StringToValueConverter.TO_INTEGER)
+     * </pre>
+     * Using Java numbers to convert to other numbers gives a seamless way to upcast when the number is encoded using a smaller
+     * type because those fit. The last argument allows a final fallback to parse from a string value.
+     */
     private static <T, V> EmbeddableTypeTransformingJsonUnmarshaller<T, V> forEmbeddable(
         Class<V> embeddedType,
         Function<V, T> transformer,
