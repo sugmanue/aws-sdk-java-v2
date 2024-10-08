@@ -407,6 +407,7 @@
         <module>pcs</module>
         <module>directoryservicedata</module>
         <module>marketplacereporting</module>
+        <module>echoservice</module>
     </modules>
     <description>The AWS Java SDK services</description>
     <url>https://aws.amazon.com/sdkforjava</url>
