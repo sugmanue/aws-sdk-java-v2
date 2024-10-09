@@ -48,7 +48,8 @@ import software.amazon.awssdk.services.dynamodb.waiters.DynamoDbWaiter;
 public class WaitersUserAgentTest {
 
     @Rule
-    public WireMockRule mockServer = new WireMockRule(options().notifier(new ConsoleNotifier(true)).dynamicHttpsPort().dynamicPort());
+    public WireMockRule mockServer =
+        new WireMockRule(options().notifier(new ConsoleNotifier(true)).dynamicHttpsPort().dynamicPort());
 
     private DynamoDbClient dynamoDbClient;
     private DynamoDbAsyncClient dynamoDbAsyncClient;
@@ -92,7 +93,8 @@ public class WaitersUserAgentTest {
     @Test
     public void asyncWaiters_shouldHaveWaitersUserAgent() {
         DynamoDbAsyncWaiter waiter = dynamoDbAsyncClient.waiter();
-        CompletableFuture<WaiterResponse<DescribeTableResponse>> responseFuture = waiter.waitUntilTableExists(DescribeTableRequest.builder().tableName("table").build());
+        CompletableFuture<WaiterResponse<DescribeTableResponse>> responseFuture =
+            waiter.waitUntilTableExists(DescribeTableRequest.builder().tableName("table").build());
 
         ArgumentCaptor<Context.BeforeTransmission> context = ArgumentCaptor.forClass(Context.BeforeTransmission.class);
         Mockito.verify(interceptor).beforeTransmission(context.capture(), ArgumentMatchers.any());
