@@ -3,7 +3,7 @@
   "metadata":{
     "apiVersion":"2010-08-01",
     "endpointPrefix":"monitoring",
-    "protocol":"query",
+    "protocol":"smithy-rpc-v2-cbor",
     "protocols":["query"],
     "serviceAbbreviation":"CloudWatch",
     "serviceFullName":"Amazon CloudWatch",

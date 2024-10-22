@@ -4,7 +4,7 @@
     "apiVersion":"2017-10-17",
     "endpointPrefix":"secretsmanager",
     "jsonVersion":"1.1",
-    "protocol":"json",
+    "protocol":"smithy-rpc-v2-cbor",
     "protocols":["json"],
     "serviceFullName":"AWS Secrets Manager",
     "serviceId":"Secrets Manager",
