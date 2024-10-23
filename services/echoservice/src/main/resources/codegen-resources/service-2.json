@@ -6,7 +6,7 @@
       "aws.auth#sigv4"
     ],
     "endpointPrefix": "echoservice",
-    "protocol": "rest-json",
+    "protocol":"smithy-rpc-v2-cbor",
     "protocols": [
       "rest-json"
     ],
