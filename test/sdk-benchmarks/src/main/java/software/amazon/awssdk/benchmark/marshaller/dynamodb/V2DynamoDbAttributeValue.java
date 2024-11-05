@@ -69,6 +69,7 @@ import software.amazon.awssdk.services.dynamodb.model.TableAlreadyExistsExceptio
 import software.amazon.awssdk.services.dynamodb.model.TableInUseException;
 import software.amazon.awssdk.services.dynamodb.model.TableNotFoundException;
 import software.amazon.awssdk.services.dynamodb.transform.PutItemRequestMarshaller;
+import software.amazon.awssdk.utils.IoUtils;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
@@ -195,7 +196,8 @@ public class V2DynamoDbAttributeValue {
     public enum TestItem {
         TINY,
         SMALL,
-        HUGE;
+        HUGE,
+        HUGE2;
 
         private static final AbstractItemFactory<AttributeValue> FACTORY = new V2ItemFactory();
 
@@ -205,6 +207,7 @@ public class V2DynamoDbAttributeValue {
             TINY.av = FACTORY.tiny();
             SMALL.av = FACTORY.small();
             HUGE.av = FACTORY.huge();
+            HUGE2.av = FACTORY.huge2();
         }
 
         public Map<String, AttributeValue> getValue() {
@@ -215,7 +218,8 @@ public class V2DynamoDbAttributeValue {
     public enum TestItemUnmarshalling {
         TINY,
         SMALL,
-        HUGE;
+        HUGE,
+        HUGE2;
 
         private byte[] utf8;
 
@@ -223,6 +227,7 @@ public class V2DynamoDbAttributeValue {
             TINY.utf8 = toUtf8ByteArray(TestItem.TINY.av);
             SMALL.utf8 = toUtf8ByteArray(TestItem.SMALL.av);
             HUGE.utf8 = toUtf8ByteArray(TestItem.HUGE.av);
+            HUGE2.utf8 = toUtf8ByteArray(TestItem.HUGE2.av);
         }
 
         public byte[] utf8() {
@@ -241,10 +246,33 @@ public class V2DynamoDbAttributeValue {
     private static byte[] toUtf8ByteArray(Map<String, AttributeValue> item) {
         SdkHttpFullRequest marshalled = putItemRequestMarshaller().marshall(PutItemRequest.builder().item(item).build());
         InputStream content = marshalled.contentStreamProvider().get().newStream();
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buff = new byte[8192];
         int read;
         try {
+            while ((read = content.read(buff)) != -1) {
+                baos.write(buff, 0, read);
+            }
+        } catch (IOException ioe) {
+            throw new UncheckedIOException(ioe);
+        }
+        return baos.toByteArray();
+    }
+
+    private static byte[] toUtf8ByteArray2(Map<String, AttributeValue> item) {
+        SdkHttpFullRequest marshalled = putItemRequestMarshaller().marshall(PutItemRequest.builder().item(item).build());
+        InputStream content = marshalled.contentStreamProvider().get().newStream();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buff = new byte[8192];
+        int read;
+        try {
+            String res = IoUtils.toUtf8String(content);
+            if (res.length() > 0) {
+                throw new RuntimeException(res);
+            }
+            //System.out.printf("==================== out:\n%s\n");
             while ((read = content.read(buff)) != -1) {
                 baos.write(buff, 0, read);
             }

@@ -4,7 +4,7 @@
     "apiVersion":"2012-08-10",
     "endpointPrefix":"dynamodb",
     "jsonVersion":"1.0",
-    "protocol":"json",
+    "protocol":"smithy-rpc-v2-cbor",
     "protocols":["json"],
     "serviceAbbreviation":"DynamoDB",
     "serviceFullName":"Amazon DynamoDB",

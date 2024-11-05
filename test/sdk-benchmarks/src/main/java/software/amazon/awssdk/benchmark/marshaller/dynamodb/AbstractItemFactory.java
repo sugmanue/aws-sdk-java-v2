@@ -124,6 +124,12 @@ abstract class AbstractItemFactory<T> {
             .build();
     }
 
+    final Map<String, T> huge2() {
+        return ImmutableMapParameter.<String, T>builder()
+                                    .put("hashKey", av(randomS()))
+                                    .put("stringAttr", av(randomS2()))
+                                    .build();
+    }
 
     protected abstract T av(String val);
 
@@ -144,6 +150,11 @@ abstract class AbstractItemFactory<T> {
     private String randomS() {
         return randomS(16);
     }
+
+    private String randomS2() {
+        return randomS(16381);
+    }
+
 
     private ByteBuffer randomB(int len) {
         byte[] b = new byte[len];
