@@ -1,0 +1,492 @@
+{
+    "version": "2.0",
+    "metadata": {
+        "apiVersion": "2024-08-01",
+        "auth": [
+            "aws.auth#sigv4"
+        ],
+        "endpointPrefix": "tickservice",
+        "protocol": "smithy-rpc-v2-cbor",
+        "protocols": [
+            "smithy-rpc-v2-cbor"
+        ],
+        "protocolSettings":{"h2":"eventstream"},
+        "serviceFullName": "com.amazon.coral.cookbook.HowToStreamEventsOverRpc#TickService",
+        "serviceId": "tick",
+        "signatureVersion": "v4",
+        "signingName": "tickservice",
+        "targetPrefix": "TickService",
+        "uid": "tick-2024-08-01"
+    },
+    "operations": {
+        "EmptyOp": {
+            "name": "EmptyOp",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            }
+        },
+        "FizzBuzz": {
+            "name": "FizzBuzz",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "FizzBuzzInput"
+            },
+            "output": {
+                "shape": "FizzBuzzOutput"
+            }
+        },
+        "GetInstant": {
+            "name": "GetInstant",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "output": {
+                "shape": "InstantResponse"
+            }
+        },
+        "GetInstantAfter": {
+            "name": "GetInstantAfter",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "GetInstantAfterInput"
+            },
+            "output": {
+                "shape": "InstantResponse"
+            },
+            "errors": [
+                {
+                    "shape": "InvalidRangeException"
+                }
+            ]
+        },
+        "Hello": {
+            "name": "Hello",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "HelloInput"
+            },
+            "output": {
+                "shape": "HelloOutput"
+            },
+            "errors": [
+                {
+                    "shape": "HelloException"
+                }
+            ]
+        },
+        "OpenConnection": {
+            "name": "OpenConnection",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "ConnectRequest"
+            },
+            "output": {
+                "shape": "ConnectResponse"
+            },
+            "errors": [
+                {
+                    "shape": "InternalException"
+                },
+                {
+                    "shape": "WrongTargetException"
+                }
+            ]
+        },
+        "RemoteGetInstantAfter": {
+            "name": "RemoteGetInstantAfter",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "RemoteGetInstantAfterInput"
+            },
+            "output": {
+                "shape": "InstantResponse"
+            },
+            "errors": [
+                {
+                    "shape": "InternalException"
+                },
+                {
+                    "shape": "UnknownTargetException"
+                }
+            ]
+        },
+        "Tick": {
+            "name": "Tick",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "TickInput"
+            },
+            "output": {
+                "shape": "TickOutput"
+            },
+            "errors": [
+                {
+                    "shape": "InvalidRangeException"
+                }
+            ]
+        },
+        "TickError": {
+            "name": "TickError",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "TickInput"
+            },
+            "output": {
+                "shape": "TickOutput"
+            },
+            "errors": [
+                {
+                    "shape": "InvalidRangeException"
+                }
+            ]
+        },
+        "TickWithShutdown": {
+            "name": "TickWithShutdown",
+            "http": {
+                "method": "POST",
+                "requestUri": "/"
+            },
+            "input": {
+                "shape": "TickInput"
+            },
+            "output": {
+                "shape": "TickOutput"
+            },
+            "errors": [
+                {
+                    "shape": "InvalidRangeException"
+                }
+            ]
+        }
+    },
+    "shapes": {
+        "BuzzEvent": {
+            "type": "structure",
+            "members": {
+                "value": {
+                    "shape": "Long"
+                }
+            },
+            "event": true
+        },
+        "ConnectRequest": {
+            "type": "structure",
+            "members": {
+                "initiatingHostId": {
+                    "shape": "String"
+                },
+                "targetHostId": {
+                    "shape": "String"
+                },
+                "connection": {
+                    "shape": "Connection"
+                }
+            }
+        },
+        "ConnectResponse": {
+            "type": "structure",
+            "members": {
+                "connection": {
+                    "shape": "Connection"
+                }
+            }
+        },
+        "Connection": {
+            "type": "structure",
+            "members": {
+                "getInstantAfterRequest": {
+                    "shape": "GetInstantAfterRequestEvent"
+                },
+                "getInstantAfterResponse": {
+                    "shape": "GetInstantAfterResponseEvent"
+                },
+                "disconnectEvent": {
+                    "shape": "DisconnectEvent"
+                }
+            },
+            "eventstream": true
+        },
+        "DisconnectEvent": {
+            "type": "structure",
+            "members": {},
+            "event": true
+        },
+        "ErrorMessage": {
+            "type": "string"
+        },
+        "FaultMessage": {
+            "type": "string"
+        },
+        "FizzBuzzInput": {
+            "type": "structure",
+            "members": {
+                "stream": {
+                    "shape": "ValueStream"
+                }
+            }
+        },
+        "FizzBuzzOutput": {
+            "type": "structure",
+            "members": {
+                "stream": {
+                    "shape": "FizzBuzzStream"
+                }
+            }
+        },
+        "FizzBuzzStream": {
+            "type": "structure",
+            "members": {
+                "fizz": {
+                    "shape": "FizzEvent"
+                },
+                "buzz": {
+                    "shape": "BuzzEvent"
+                },
+                "negativeNumberException": {
+                    "shape": "NegativeNumberException"
+                },
+                "internalException": {
+                    "shape": "InternalException"
+                }
+            },
+            "eventstream": true
+        },
+        "FizzEvent": {
+            "type": "structure",
+            "members": {
+                "value": {
+                    "shape": "Long"
+                }
+            },
+            "event": true
+        },
+        "GetInstantAfterInput": {
+            "type": "structure",
+            "members": {
+                "milliseconds": {
+                    "shape": "Milliseconds"
+                }
+            }
+        },
+        "GetInstantAfterRequestEvent": {
+            "type": "structure",
+            "members": {
+                "eventId": {
+                    "shape": "String"
+                },
+                "request": {
+                    "shape": "GetInstantAfterInput"
+                }
+            },
+            "event": true
+        },
+        "GetInstantAfterResponseEvent": {
+            "type": "structure",
+            "members": {
+                "eventId": {
+                    "shape": "String"
+                },
+                "response": {
+                    "shape": "InstantResponse"
+                }
+            },
+            "event": true
+        },
+        "HelloException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "String"
+                }
+            },
+            "exception": true
+        },
+        "HelloInput": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "shape": "String"
+                }
+            }
+        },
+        "HelloOutput": {
+            "type": "structure",
+            "members": {
+                "greeting": {
+                    "shape": "String"
+                }
+            }
+        },
+        "InstantResponse": {
+            "type": "structure",
+            "members": {
+                "time": {
+                    "shape": "Timestamp"
+                }
+            },
+            "event": true
+        },
+        "InternalException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "ErrorMessage"
+                }
+            },
+            "exception": true,
+            "fault": true
+        },
+        "InvalidRangeException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "FaultMessage"
+                }
+            },
+            "exception": true
+        },
+        "Long": {
+            "type": "long"
+        },
+        "Milliseconds": {
+            "type": "long"
+        },
+        "NegativeNumberException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "ErrorMessage"
+                }
+            },
+            "exception": true
+        },
+        "RemoteGetInstantAfterInput": {
+            "type": "structure",
+            "members": {
+                "targetHost": {
+                    "shape": "String"
+                },
+                "getInstantAfterInput": {
+                    "shape": "GetInstantAfterInput"
+                }
+            }
+        },
+        "Seconds": {
+            "type": "long"
+        },
+        "ServiceShuttingDownException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "ErrorMessage"
+                }
+            },
+            "exception": true
+        },
+        "String": {
+            "type": "string"
+        },
+        "TickEventStream": {
+            "type": "structure",
+            "members": {
+                "time": {
+                    "shape": "InstantResponse"
+                },
+                "negativeNumberException": {
+                    "shape": "NegativeNumberException"
+                },
+                "internalException": {
+                    "shape": "InternalException"
+                },
+                "serviceShuttingDownException": {
+                    "shape": "ServiceShuttingDownException"
+                }
+            },
+            "eventstream": true
+        },
+        "TickInput": {
+            "type": "structure",
+            "members": {
+                "seconds": {
+                    "shape": "Seconds"
+                }
+            }
+        },
+        "TickOutput": {
+            "type": "structure",
+            "members": {
+                "responseField1": {
+                    "shape": "String"
+                },
+                "responseField2": {
+                    "shape": "String"
+                },
+                "eventStream": {
+                    "shape": "TickEventStream"
+                }
+            }
+        },
+        "Timestamp": {
+            "type": "timestamp"
+        },
+        "UnknownTargetException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "ErrorMessage"
+                }
+            },
+            "exception": true
+        },
+        "Value": {
+            "type": "structure",
+            "members": {
+                "value": {
+                    "shape": "Long"
+                }
+            },
+            "event": true
+        },
+        "ValueStream": {
+            "type": "structure",
+            "members": {
+                "Value": {
+                    "shape": "Value"
+                }
+            },
+            "eventstream": true
+        },
+        "WrongTargetException": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "shape": "ErrorMessage"
+                }
+            },
+            "exception": true
+        }
+    }
+}

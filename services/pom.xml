@@ -171,6 +171,9 @@
         <module>rdsdata</module>
         <module>robomaker</module>
         <module>transfer</module>
+
+        <module>tickservice</module>
+        
         <module>globalaccelerator</module>
         <module>comprehendmedical</module>
         <module>fsx</module>
